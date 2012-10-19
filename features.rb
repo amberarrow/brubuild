@@ -7,6 +7,9 @@
 # packages, etc.). Very limited right now but more extensive facilities will be added
 # soon.
 #
+c = File.expand_path( File.dirname __FILE__ )      # this dir
+$LOAD_PATH.unshift c if ! $LOAD_PATH.include? c
+
 require 'system.rb'
 
 # code to extract information about installed features of the system
@@ -67,9 +70,12 @@ class Build
 
     def initialize
       pc = Util.find_in_path 'pkg-config'
-      raise "Unable to find pkg-config executable" if !pc
-      @pkg_config = pc
+      @pkg_config = pc if pc
     end  # initialize
+
+    def exist?    # return true iff pkg-config was found
+      defined? @pkg_config
+    end  # exist?
 
     # runs pkg-config and returns flags; kind = :exist, :c, :l or :L
     def get_flags name, kind
@@ -103,18 +109,94 @@ class Build
     end  # get_flags
   end  # PkgConfig
 
+  class Endian < Feature      # test processor endianness
+    attr :big    # true iff big-endian
+
+    def initialize
+      a = [(65 << 8) | 66]
+      @big = (a.pack('S') == a.pack('S>'))    # Ruby 1.9.3 or later
+    end  # initialize
+  end  # Endian
+
+  class Headers < Feature      # presence of various system header files
+
+    attr :dirs    # list of directories to search for headers
+
+    def get_include_path    # get compiler include path for system files
+      log = Build::LogMain.get
+      cmd = 'cpp -xc++ -v'  # desired output goes to stderr
+      status = Util.run_cmd cmd, log, false
+      raise "Failed to get include path" if !status.first
+
+      # parse output
+      line1 = '#include <...> search starts here:'
+      line2 = 'End of search list.'
+      state, result = :init, []
+      status.last.each_line{ |line|
+        line.strip!
+        case state
+        when :init then
+          next if line != line1
+          state = :path
+        when :path then
+          raise "Unexpected: line is empty" if line.empty?
+          if line2 == line
+            state = :done
+            break
+          end
+          result << line
+        else raise "Bad state: #{state}"
+        end  # state
+      }  # each_line
+      raise "Failed to find last line" if :done != state
+      return result
+    end  # get_include_path
+
+    def initialize
+      @dirs = get_include_path
+      raise "Header path empty" if @dirs.empty?
+    end  # initialize
+
+    # returns directory containing system header file if found, nil otherwise; if 'quick'
+    # is true, we just check for the presence of the file in @dirs otherwise, we actually
+    # run the pre-processor to see if we get an error (latter not yet implemented)
+    #
+    def get( file, quick = true )
+      return nil if !file || file.empty?
+      raise "Slow checking not yet implemented" if ! quick
+      @dirs.find{ |d| File.exist? File.join( d, file ) }
+    end  # file
+      
+  end  # Headers
+
+  class Executables < Feature      # presence of various executables
+
+    def get file    # returns path to executable file if found, nil otherwise
+      return nil if !file || file.empty?
+      Util.find_in_path file
+    end  # file
+      
+  end  # Headers
+
 end  # Build
 
 if $0 == __FILE__
   Build.init_system
   Build::LogMain.set_log_file_params( :name => 'features.log' )
 
-  [ :PkgConfig ].each { |f|
-    obj = Build::Feature.get f
-    if !obj
-      puts "Feature %s absent: #{obj.to_s}" % f
-      next
-    end
-    puts "Feature %s present" % f
+  obj = Build::Feature.get :Endian
+  puts "Endianness: %s" % (obj.big ? 'big' : 'little')
+
+  obj = Build::Feature.get :PkgConfig
+  puts "pkg-config is %s" % (obj.exist? ? 'present' : 'absent')
+
+  obj = Build::Feature.get :Headers
+  # foo.h is nonexistent
+  %w{ byteswap.h dlfcn.h inttypes.h memory.h stddef.h stdint.h stdlib.h strings.h
+      string.h sys/mman.h sys/resource.h sys/types.h unistd.h
+      foo.h
+    }.each{ |f|
+    puts "%s: %s" % [f, obj.get( f )]
   }
+  
 end

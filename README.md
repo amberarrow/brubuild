@@ -48,7 +48,7 @@ First, retrieve the Rubuild sources with:
     git clone https://github.com/amberarrow/rubuild
 
 The <b><code>projects</code></b> subdirectory under <b><code>rubuild</code></b> has a few
-directories for building various open-source projects. Currently there are three:
+directories for building various open-source projects. The current list is:
 
 * <b><code>HelloWorld</code></b>
 * <b><code>snappy</code></b>
@@ -95,7 +95,8 @@ for example:
 
 * <b><code>http://titusd.co.uk/2010/08/29/rake-builder/</code></b>
 
-In contrast, project configuration files in Rubuild are Ruby scripts so the full power
+In contrast, project configuration files in <b><code>Rubuild</code></b> are Ruby scripts
+so the full power
 of a clean, well-designed, object-oriented, fully dynamic programming language is
 available along with a wealth of standard libraries. A specific design goal, therefore,
 was to eschew declarative data files (e.g. XML files, Makefiles, properties files)
@@ -177,7 +178,12 @@ Here is a brief feature summary of Rubuild features:
 ### How to build your projects
 
 The easiest way is to emulate some of the demo projects. Some knowledge of Ruby is
-obviously required. We hope to simplify this process soon, but for now we suggest the
+obviously required. It is important to remember that <b><code>Build.src_root</code></b>
+and <b><code>Build.obj_root</code></b> are critically important variables holding
+respectively, the root of the source directory (which is not changed in any way) and the
+root of the object directory where all generated objects are placed.
+
+We hope to simplify this process soon, but for now we suggest the
 following steps to port your project, say <b><code>xyz</code></b>, to
 <b><code>Rubuild</code></b>:
 
@@ -188,21 +194,82 @@ following steps to port your project, say <b><code>xyz</code></b>, to
   across the entire project. If some files need different options, you can make these
   adjustments later in the specific subprojects that contain these files.
 
-  The second should define one class per subproject derived from the class named
-  <b><code>Bundle</code></b>. At least one such class _must_ be present.
+  The second should define one class per subproject (discussed below) derived from the
+  class named <b><code>Bundle</code></b>. At least one such class _must_ be present.
 
-+ A subproject is, roughly speaking, a subdirectory of the main project with source
++ In the first file, <b><code>xyz_config.rb</code></b>, change these functions suitably
+  to define the corresponding set of global options (no changes should normally be needed
+  in any of the other functions):
+
+  <table border="1">
+  <tr><th>Function</th> <th>Description</th></tr>
+  <tr><td>init_cpp_options         </td><td>Pre-processor</td></tr>
+  <tr><td>init_cc_options          </td><td>C compiler</td></tr>
+  <tr><td>init_cxx_options         </td><td>C++ compiler</td></tr>
+  <tr><td>init_ld_cc_lib_options   </td><td>Linker, building library of C files</td></tr>
+  <tr><td>init_ld_cc_exec_options  </td><td>Linker, building executable of C files</td></tr>
+  <tr><td>init_ld_cxx_lib_options  </td><td>Linker, building library of C++ files</td></tr>
+  <tr><td>init_ld_cxx_exec_options </td><td>Linker, building executable of C++ files</td></tr>
+  </table>
+
++ A *subproject* is, roughly speaking, a subdirectory of the main project with source
   files that form libraries and executables. The <b><code>dir_root</code></b> instance
   variable holds the name of this subdirectory (which can just be '.' if all sources are
   in the main project directory). <b><code>Rubuild</code></b> will automatically scan
   all files and directories under the root for C or C++ files.
 
-+ The derivative Bundle class should then define include and exclude lists (to limit the
-  files and directories that are searched), libraries and executables to be built and
-  the list of default targets. The <b><code>setup</code></b> method must be present and
++ The derivative <b><code>Bundle</code></b> class should then define include and exclude
+  lists (to limit the files and directories that are searched), libraries and executables
+  that can be built and the list of default targets to be built.
+  The <b><code>setup</code></b> method must be present and
   is automatically
   invoked at the appropriate time; additional methods that are invoked within setup
-  may be defined as needed.
+  may be defined as needed. The <b><code>initialize</code></b> method, after invoking
+  <b><code>super</code></b>, should define these instance variables:
+
+  <table border="1">
+  <tr><th>Instance variable</th> <th>Description</th></tr><tr><td>
+    dir_root</td><td>
+      Root of the subproject, relative to the root of the main project.</td></tr><tr><td>
+    include</td><td>
+      List of directories to search for sources; if omitted, all directories will be
+      searched.</td></tr><tr><td>
+    exclude</td><td>
+      List of directories to exclude from search for sources; if omitted, nothing is
+      excluded (note that this list may also contain specific filenames that should be
+      ignored).</td></tr><tr><td>
+    libraries</td><td>
+      List of libraries to be built.</td></tr><tr><td>
+    executables</td><td>
+      List of executables to be built.</td></tr><tr><td>
+    targets</td><td>
+      List of default targets to be built.</td></tr>
+  </table>
+
+  The list of methods in the derivative class is described in the table below:
+  <table border="1">
+  <tr><th>Function</th> <th>Description</th></tr><tr><td>
+    initialize</td><td>
+      Perform necessary initialization as described above.</td></tr><tr><td>
+    setup</td><td>
+      Perform necessary setup for this subproject; all the remaining methods are
+      invoked by this one.</td></tr><tr><td>
+    create_dirs</td><td>
+      Create necessary subdirectories under the object root.</td></tr><tr><td>
+    discover_targets</td><td>
+      Recursively traverse the source root (consistent with the include and exclude
+      lists discussed above) finding all source files.</td></tr><tr><td>
+    add_lib_targets</td><td>
+      Register library targets.</td></tr><tr><td>
+    add_exe_targets</td><td>
+      Register executable targets.</td></tr><tr><td>
+    adjust_options</td><td>
+      Tweak options for invidual targets if necessary; should be called towards the end
+      of <b><code>setup</code></b> (see below).</td></tr><tr><td>
+    add_default_targets</td><td>
+      Register targets that will be built by default.</td></tr>
+  </table>
+
 
 + As an example, suppose your project has subdirectories A, B, C and D where the first
   two have source files that are aggregated into libraries <b><code>libA</code></b> and
@@ -222,7 +289,9 @@ following steps to port your project, say <b><code>xyz</code></b>, to
       in that directory. Within the last you should also add C and D to the exclude list
       to prevent scanning of those directories.
 
-+ Within the setup method you can customize options for individual files; for example,
++ Within the setup method, after all targets for this subproject have been discovered or
+  registered, you can customize options for individual files. Typically, this is done in
+  a method named <b><code>adjust_options</code></b>. For example,
   to add the <b><code>-Wtype-limits</code></b> warning option when compiling
   <b><code>foo.cc</code></b> and to remove the <b><code>-Wshadow</code></b> warning
   option (which is presumably part of the global project defaults defined in

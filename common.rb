@@ -171,20 +171,20 @@ class Build
 
     # run given shell command; the command is logged if a logger is provided
     # if command is successful:
-    #     return 2 element array [true, s] where s is stripped command output and, if a
-    #     logger is provided, and output is non-empty, log output;
+    #     return 2 element array [true, s] where s is stripped command output concatenated
+    #     with the error output. If a logger is provided log both
     # if command failed
-    #     create a message string that combines stdout and stderr and log it if a logger is
-    #     provided; then, if die is true, raise exception; otherwise, [false, s] where s
-    #     is the message string.
+    #     create a message string that combines stdout and stderr and log it if a logger
+    #     is provided; then, if die is true, raise exception; otherwise, [false, s]
+    #     where s is the message string.
     #
     def self.run_cmd cmd, log = nil, die = true
-      log.info cmd if log
+      log.info "Command: #{cmd}" if log
       out, err, status = Open3.capture3( cmd )
       out.strip!; err.strip!
       if status.success?
-        log.info out if log && !out.empty?
-        return [true, out]
+        log.info "Out = %s, Err = %s" % [out, err] if log
+        return [true, out + err]
       end
 
       # command failed
