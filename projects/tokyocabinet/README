@@ -1,0 +1,26 @@
+These files build the tokyocabinet database. Get the source archive from
+http://fallabs.com/tokyocabinet/tokyocabinet-1.4.47.tar.gz and unpack it somewhere.
+
+Start the build like this (where <src-dir> is the full path to the directory where
+you unpacked the source archive):
+
+ruby -w tc.rb -s <src-dir> -o /var/tmp/rubuild/tokyocabinet -v 1.4.47 -b rel
+
+After it finishes, you should find the library 'libtokyocabinet.1.4.47.so_rel'
+and a number of executables under /var/tmp/rubuild/tokyocabinet/{lib,bin}.
+
+NOTES:
+=====
+1. Use the -h (or --help) option to see a summary of available options.
+
+2. The -o option specifies the destination directory where all object files will be
+   placed; the source directory will not be modified in any way.
+
+3. The version number needs to be explicitly specified with the -v option.
+
+4. The -b option specified the build type: 'rel' denotes a release build so the compiles
+   will be optimized, asserts disabled and the binaries stripped.
+
+5. There is currently no analogue of "make install"; we hope to provide equivalent
+   functionality in the future but for now we suggest using a small custom script to
+   copy appropriate binaries from the object directory to where they need to be installed.

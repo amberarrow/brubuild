@@ -1,0 +1,40 @@
+These files build the HelloWorld sample project that ships as part of the Rubuild
+sources.
+
+Start the build like this:
+
+ruby -w hello_world.rb -s $PWD/../../HelloWorld -o /var/tmp/rubuild/HelloWorld -b rel
+
+You should see output like this:
+
+Discovering dependencies ... done
+0 targets remain
+Shutting down thread pool ...
+Build finished
+
+At this point, you can examine /var/tmp/rubuild/HelloWorld/bin to verify that it has a
+binary named "hello.rel_d". Now, run the binary with an integer argument:
+    /var/tmp/rubuild/HelloWorld/bin/hello.dbg_d 3
+
+You should see the following output:
+
+Hello Mars
+
+A brief help message listing available options is displayed with:
+    ruby -w hello_world.rb -h
+
+NOTES:
+=====
+1. Use the -h (or --help) option to see a summary of available options.
+
+2. The -o option specifies the destination directory where all object files will be
+   placed; the source directory will not be modified in any way.
+
+3. The version number is optional and is specified with the -v option.
+
+4. The -b option specifies the build type: 'rel' denotes a release build so the compiles
+   will be optimized, asserts disabled and the binaries stripped.
+
+5. There is currently no analogue of "make install"; we hope to provide equivalent
+   functionality in the future but for now we suggest using a small custom script to
+   copy appropriate binaries from the object directory to where they need to be installed.
