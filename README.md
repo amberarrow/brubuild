@@ -53,6 +53,7 @@ directories for building various open-source projects. The current list is:
 * <b><code>HelloWorld</code></b>
 * <b><code>snappy</code></b>
 * <b><code>tokyocabinet</code></b>
+* <b><code>openssl</code></b>
 
 Each directory has a <b><code>README</code></b> file describing how to build it.
 
