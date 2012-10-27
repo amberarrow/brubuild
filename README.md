@@ -1,6 +1,6 @@
-# <b>Rubuild</b> -- A smart build system written in Ruby
+# <b>Brubuild</b> -- A smart build system written in Ruby
 
-<b>Rubuild</b> is a brand new build system written from scratch in pure Ruby. It is
+<b>Brubuild</b> is a brand new build system written from scratch in pure Ruby. It is
 designed to be a replacement for <b><code>Make</code></b>, <b><code>automake</code></b>,
 <b><code>autoconf</code></b>, <b><code>libtool</code></b> and similar tools on some
 common platforms. It is currently targeted at projects that are written in C/C++ and has
@@ -19,7 +19,7 @@ been tested on Linux and Mac/OSX.
 
 ### Installing Ruby 1.9.X and Tokyo Cabinet
 
-<b>Rubuild</b> needs Ruby 1.9.X which itself has a couple of prerequisites: the
+<b>Brubuild</b> needs Ruby 1.9.X which itself has a couple of prerequisites: the
 development libraries for <b>zlib</b> and <b>libreadline6</b>
 (packages <b><code>zlib1g-dev</code></b> and <b><code>libreadline6-dev</code></b>
 on debian-based systems). It also needs <b>Tokyo Cabinet</b> (a "NoSQL" database),
@@ -43,11 +43,11 @@ After this, you should be able verify the Ruby version with:
 
 ### How to build demo projects
 
-First, retrieve the Rubuild sources with:
+First, retrieve the Brubuild sources with:
 
-    git clone https://github.com/amberarrow/rubuild
+    git clone https://github.com/amberarrow/brubuild
 
-The <b><code>projects</code></b> subdirectory under <b><code>rubuild</code></b> has a few
+The <b><code>projects</code></b> subdirectory under <b><code>brubuild</code></b> has a few
 directories for building various open-source projects. The current list is:
 
 * <b><code>HelloWorld</code></b>
@@ -57,29 +57,36 @@ directories for building various open-source projects. The current list is:
 Each directory has a <b><code>README</code></b> file describing how to build it.
 
 <b><code>HelloWorld</code></b> has a small C++ program and a C library and is part of
-the <b>Rubuild</b> sources.
+the <b>Brubuild</b> sources.
 Build it like this (details in <b><code>projects/HelloWorld/README</code></b>):
 
-    cd rubuild/projects/HelloWorld
-    ruby -w hello_world.rb -s $PWD/../../HelloWorld -o /var/tmp/rubuild/HelloWorld
+    cd brubuild/projects/HelloWorld
+    ruby -w hello_world.rb -s $PWD/../../HelloWorld -o /var/tmp/brubuild/HelloWorld
 
 <b><code>Snappy</code></b> is a fast C++ compression library available at
 <b><code>http://code.google.com/p/snappy/</code></b>
 Building it is similar (details in <b><code>projects/snappy/README</code></b>):
 
-    cd rubuild/projects/snappy
-    ruby -w snappy.rb -s <snappy-src-dir> -o /var/tmp/rubuild/snappy -b rel
+    cd brubuild/projects/snappy
+    ruby -w snappy.rb -s <snappy-src-dir> -o /var/tmp/brubuild/snappy -b rel
 
 Tokyo Cabinet is a fast "NoSQL" database written in C. It is available at
 <b><code>http://fallabs.com/tokyocabinet/tokyocabinet-1.4.48.tar.gz</code></b>
 Building it is also similar (details in <b><code>projects/tokyocabinet/README</code></b>):
 
-    cd rubuild/projects/tokyocabinet
-    ruby -w tc.rb -s <tc-src-dir> -o /var/tmp/rubuild/tokyocabinet -b rel
+    cd brubuild/projects/tokyocabinet
+    ruby -w tc.rb -s <tc-src-dir> -o /var/tmp/brubuild/tokyocabinet -b rel
+
+OpenSSL is a toolkit for the SSL protocols written in C. It is available at
+<b><code>http://www.openssl.org/</code></b>
+Building it is similar (details in <b><code>projects/openssl/README</code></b>):
+
+    cd brubuild/projects/openssl
+    ruby -w openssl.rb -s <openssl-src-dir> -o /var/tmp/brubuild/openssl -b rel -l static
 
 ### Rationale:
 
-The motivation for writing <b>Rubuild</b> is to transcend the limitations of a tool like
+The motivation for writing <b>Brubuild</b> is to transcend the limitations of a tool like
 <b>Make</b>
 (and its numerous siblings and look-alikes) with its declarative semantics that severely
 limit its usability, flexibility and programmability. Over the years, Make has been
