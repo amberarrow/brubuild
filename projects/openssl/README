@@ -1,0 +1,37 @@
+These files build the OpenSSL toolkit and library (version 1.0.1c). Get it from:
+    http://www.openssl.org/
+and unpack it somewhere. Then cd into the top-level directory run
+
+  "./config"                       -- for x86_64 (64-bit Linux)
+  "./Configure darwin64-x86_64-cc" -- for Mac OSX
+
+This step is essential since it generates a C header file (crypto/opensslconfig.h) with
+definitions appropriate for your system overwriting the boiler-plate version that cames
+with the distribution).
+
+Start the build like this (where <src-dir> is the full path to the root of the unpacked
+source directory, e.g. ~/Software/openssl-1.0.1c):
+
+    ruby -w openssl.rb -s <src-dir> -o /var/tmp/rubuild/openssl -b rel -l static
+
+Omit the "-b rel" if you want a debug (i.e. non-optimized) build; on my machine, the
+debug build takes 21s and the optimized build takes 30s.
+
+After it finishes, you should find the library files 'libcrypto.a_rel' and 'libssl.a_rel'.
+and the binary 'openssl.rel_s' under /var/tmp/rubuild/openssl/{lib,bin}.
+
+NOTES:
+=====
+1. Use the -h (or --help) option to see a summary of available options.
+
+2. The -o option specifies the destination directory where all object files will be
+   placed; the source directory will not be modified in any way.
+
+3. The version number can be explicitly specified with the -v option.
+
+4. The -b option specifies the build type: 'rel' denotes a release build so the compiles
+   will be optimized, asserts disabled and the binaries stripped.
+
+5. There is currently no analogue of "make install"; we hope to provide equivalent
+   functionality in the future but for now we suggest using a small custom script to
+   copy appropriate binaries from the object directory to where they need to be installed.

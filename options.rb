@@ -685,6 +685,15 @@ class Build    # main class and namespace
     end
   end  # OptionDiagnostic
 
+  # Special case of assembler pass-through
+  #   -Wa,--noexecstack
+  #
+  class OptionNoExecStack < Option
+    def self.[]
+      new '-Wa,--noexecstack', :compiler, :none
+    end
+  end  # OptionNoExecStack
+
   # --------------------------------------------------
   # Linker-only options -- BEGIN
   # NOTE: Some options are for both compiling and linking (e.g. -fPIC); they are
@@ -1088,7 +1097,12 @@ class Build    # main class and namespace
 
         when /^-std=c99/o then result << OptionStd[ 'c99' ]
 
-        when /^-W(\S+)/o then result << OptionWarning[ $1 ]
+        when /^-W(\S+)/o then
+          if $1 == 'a,--noexecstack'    # assembler pass through
+            result << OptionNoExecStack[]
+          else
+            result << OptionWarning[ $1 ]
+          end
 
         when /^-g$/o
           raise "-g option invalid for release build" if :rel == @bld

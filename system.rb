@@ -6,6 +6,9 @@
 # Classes to extract platform, OS and hardware details
 #
 
+c = File.expand_path( File.dirname __FILE__ )      # this dir
+$LOAD_PATH.unshift c if ! $LOAD_PATH.include? c
+
 # keep requirements here to a minimum since Build.init_system is low-level code whose
 # results are used in many other places
 #
@@ -87,14 +90,15 @@ class Build
 
     # Some sample values:
     #
-    #                   Ubuntu 10.4        RedHat 5
-    #                   ===========        ========
-    # dist_id           Ubuntu             RedHatEnterpriseClient
-    # dist_release      10.04              5.6
-    # dist_codename     lucid              Tikanga
+    #                   Ubuntu 10.4   Ubuntu 12.04    RedHat 5
+    #                   ===========   ============    ========
+    # dist_id           Ubuntu        Ubuntu          RedHatEnterpriseClient
+    # dist_release      10.04         12.04           5.6
+    # dist_codename     lucid         precise         Tikanga
     #
     # dist_description:
     # Ubuntu 10.04 -- Ubuntu 10.04.4 LTS
+    # Ubuntu 12.04 -- Ubuntu 12.04.1 LTS
     # Redhat 5 -- Red Hat Enterprise Linux Client release 5.6 (Tikanga)
     #
     attr :dist_id, :dist_release, :dist_codename, :dist_description, :ncores, :mem
@@ -147,7 +151,7 @@ class Build
 
     end  # initialize
 
-  end  # LinuxUbuntu
+  end  # Linux
 
   class Darwin < Nix    # Darwin/OSX specific stuff
     include Singleton
@@ -221,6 +225,6 @@ class Build
 end  # Build
 
 if $0 == __FILE__
-  Build.init_system
+  #Build.init_system
   Build.dump_system
 end

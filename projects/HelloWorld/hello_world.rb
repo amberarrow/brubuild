@@ -11,8 +11,35 @@ m = File.expand_path( File.join c, '..', '..' )    # main dir
 #
 class Build
 
-  # base class for a new library bundle -- MUST be extended by each bundle
-  # (see README file for details)
+  # Base class for a new subproject -- MUST be extended by each bundle
+  #
+  # Each collection of closely related libraries and/or executables whose sources appear
+  # under a single directory is called a bundle. Each bundle is configured via a single
+  # derived class of Bundle.
+  #
+  # Each derived class of Bundle _must_ have:
+  # (a) an initialize method that takes a single argument (current build object).
+  # (b) a setup method that sets up everything needed by the bundle.
+  # The base class has additional methods to simplify this work but derived classes may
+  # ignore these methods if they so choose.
+  #
+  # These are singleton classes used for encapsulating all the information about a single
+  # bundle, namely:
+  # A. The root directory where sources for this bundle are located.
+  # B. The set of libraries and executables that must be built for this bundle.
+  # C. The set of object files that comprise each library or executable.
+  # D. Any additions or deletions to the compiler and linker options for any object,
+  #    library, or executable in this bundle.
+  #
+  # The setup method must do these things:
+  # 1. Define @dir_root relative to src_root (e.g. 'libFoo')
+  # 2. Create any needed directories under obj_root
+  # 3. Invoke build.discover_targets with suitable include/exclude lists
+  # 4. Invoke build.add_targets to add all the library and executable targets.
+  # 5. Invoke build.add_default_targets to add all the library and executable targets that
+  #    should be built by default
+  # 6. Invoke build.delete_target_options and build.add_target_options to adjust the
+  #    compiler and linker options for targets in this bundle, if necessary.
   #
   class Bundle
     attr :build, :dir_root, :include, :exclude

@@ -14,7 +14,7 @@ Build finished
 
 At this point, you can examine /var/tmp/rubuild/HelloWorld/bin to verify that it has a
 binary named "hello.rel_d". Now, run the binary with an integer argument:
-    /var/tmp/rubuild/HelloWorld/bin/hello.dbg_d 3
+    /var/tmp/rubuild/HelloWorld/bin/hello.rel_d 3
 
 You should see the following output:
 

@@ -91,11 +91,11 @@ of moderate complexity. Additionally, a vast array of equally awkward tools such
 increases in complexity. Various websites discuss the pain associated with these tools,
 for example:
 
+* <b><code>http://www.conifersystems.com/whitepapers/gnu-make/</code></b>
 * <b><code>http://voices.canonical.com/jussi.pakkanen/tag/pain/</code></b>
-
 * <b><code>http://titusd.co.uk/2010/08/29/rake-builder/</code></b>
 
-In contrast, project configuration files in <b><code>Rubuild</code></b> are Ruby scripts
+In contrast, project configuration files in <b><code>Brubuild</code></b> are Ruby scripts
 so the full power
 of a clean, well-designed, object-oriented, fully dynamic programming language is
 available along with a wealth of standard libraries. A specific design goal, therefore,
@@ -113,7 +113,7 @@ This approach provides a number of benefits, among them:
   Another use case is a situation where a build is using a number of warning flags
   along with the <b><code>-Werror</code></b> option (which causes warnings to be treated
   as errors). When a new version of the compiler arrives, it causes build failures due
-  to more stringent checking of warning-conditions. With <b>Rubuild</b>, in such cases,
+  to more stringent checking of warning-conditions. With <b>Brubuild</b>, in such cases,
   we can selectively disable <b><code>-Werror</code></b> on the specific
   file(s) which cause build failure rather than for the entire build.
 
@@ -128,7 +128,7 @@ This approach provides a number of benefits, among them:
   some performance degradation since it introduces an unnecessary extra indirection to
   every variable and function reference.
 
-+ Persistence enables <b><code>Rubuild</code></b> to detect changes in options and
++ Persistence enables <b><code>Brubuild</code></b> to detect changes in options and
   trigger a rebuild; in contrast, if <b><code>Make</code></b> is run once with one set
   of say, <b><code>CFLAGS</code></b> supplied on the command
   line and immediately re-run with a different set, it will not rebuild any of the
@@ -144,12 +144,12 @@ This approach provides a number of benefits, among them:
 
 + Decoupling the location of the source directory from the directory where the
   objects are generated and each from the location of the build tool itself. This allows
-  <b><code>Rubuild</code></b> to operate in a completely non-intrusive manner since it
+  <b><code>Brubuild</code></b> to operate in a completely non-intrusive manner since it
   make no changes whatsover to the source directories.
 
 ### Features
 
-Here is a brief feature summary of Rubuild features:
+Here is a brief feature summary of <b><code>Brubuild</code></b> features:
 
 + All build files are Ruby programs so arbitrary customization and tweaking of the
   build process should, in theory, be easy.
@@ -157,7 +157,7 @@ Here is a brief feature summary of Rubuild features:
 + Location of build files is decoupled from the location of the sources and both are
   decoupled from the directory where generated objects are placed.
 + Uses a thread pool for parallel builds.
-+ Fast -- in our informal time trials, <b><code>Rubuild</code></b> is as fast as and
++ Fast -- in our informal time trials, <b><code>Brubuild</code></b> is as fast as and
   often faster than <b><code>Make</code></b> with the same parallel build factor.
 + Supports 3 build types: <b>debug</b>, <b>optimized</b>, <b>release</b>. The last is the
   same as the penultimate but it strips symbols from the object files.
@@ -175,6 +175,12 @@ Here is a brief feature summary of Rubuild features:
   if there is any change to the options used to build them.
 + Tested on Linux and Mac/OSX.
 
+### Querying the Environment
+
+There is some code in <b><code>features.rb</code></b> for querying the environment for
+things like the presence of a header file, endianness of the CPU, compiler version etc.
+This code is very preliminary and is being worked on.
+
 ### How to build your projects
 
 The easiest way is to emulate some of the demo projects. Some knowledge of Ruby is
@@ -185,7 +191,7 @@ root of the object directory where all generated objects are placed.
 
 We hope to simplify this process soon, but for now we suggest the
 following steps to port your project, say <b><code>xyz</code></b>, to
-<b><code>Rubuild</code></b>:
+<b><code>Brubuild</code></b>:
 
 + Create two Ruby files by copying the corresponding files from
   <b><code>HelloWorld</code></b> (or one of the
@@ -215,7 +221,7 @@ following steps to port your project, say <b><code>xyz</code></b>, to
 + A *subproject* is, roughly speaking, a subdirectory of the main project with source
   files that form libraries and executables. The <b><code>dir_root</code></b> instance
   variable holds the name of this subdirectory (which can just be '.' if all sources are
-  in the main project directory). <b><code>Rubuild</code></b> will automatically scan
+  in the main project directory). <b><code>Brubuild</code></b> will automatically scan
   all files and directories under the root for C or C++ files.
 
 + The derivative <b><code>Bundle</code></b> class should then define include and exclude
@@ -274,7 +280,7 @@ following steps to port your project, say <b><code>xyz</code></b>, to
 + As an example, suppose your project has subdirectories A, B, C and D where the first
   two have source files that are aggregated into libraries <b><code>libA</code></b> and
   <b><code>libB</code></b> and you want
-  <b><code>Rubuild</code></b> to ignore completely the last two; assume further that
+  <b><code>Brubuild</code></b> to ignore completely the last two; assume further that
   you also have some source files in the main project directory that need to be compiled
   and built into an executable. You would proceed as follows:
 
@@ -337,6 +343,49 @@ this file. Here is a table that summarizes the functionality embodied in each fi
 We plan to add much more detail here shortly but in the interim there are comments on
 all non-trivial parts of the code so it should be very readable if you know some Ruby.
 
+### Operation
+
+Recall that each project, say <b><code>xyz</code></b> has two associated files  -- a
+configuration file <b><code>xyz_config.rb</code></b> and the main file that defines all
+the subprojects, <b><code>xyz.rb</code></b>.
+
+The high level algorithm and call sequence is as follows:
+
+System information such as the type OS, CPU, number of cores, RAM size etc. is initialized
+at load time by the call to <b><code>Build.init_system</code></b> when
+<b><code>system.rb</code></b> is loaded. You can examine this information by running
+this file in isolation:
+
+    ruby -w system.rb
+
+Main execution begins with the call to <b><code>Build.start</code></b> at the very end
+of your project file, e.g. <b><code>hello_world.rb</code></b>. This function does the
+following:
+
++ Initialize logger
++ Parse commandline arguments
++ Create threadpool
++ Invoke <b><code>Build.setup</code></b> located in your project configuration file
+  which, in turn, does the following:
+    + Create necessary subdirectories (e.g. <b><code>bin</code></b>,
+      <b><code>lib</code></b>, <b><code>include</code></b>) under the root of the object
+      directory.
+    + Invoke <b><code>setup</code></b> method of each bundle (i.e. subproject) to
+      initialize the subproject (e.g. define the libraries and executables that *may* be
+      built and the default targets that *should* be built).
+
++ (At this point, project initialization/configuration is complete and the core build
+  process begins). Replace target list to be built by the user-specified list on
+  the command line, if any.
++ Open the persistence database.
++ Discover header file dependencies (either from the database or by running the
+  pre-processor)
++ Enqueue all out-of-date targets in the job queue for the thread pool and wait for all
+  jobs to complete.
++ Shut down thread pool
++ Save information about the current build to the database
++ Log "Build finished" message and exit.
+
 ### Limitations
 
 + Currently limited to C/C++ (with some assembler) projects in Linux and Unix-like
@@ -355,7 +404,7 @@ all non-trivial parts of the code so it should be very readable if you know some
   may reach zero and bounce back up to a small number and count down to zero again; this
   is normal and no cause for alarm.
 
-Finally, <b><code>Rubuild</code></b> is still in its infancy and has only been lightly
+Finally, <b><code>Brubuild</code></b> is still in its infancy and has only been lightly
 tested, so it is likely that it will undergo significant changes in the weeks ahead.
 
 We welcome feedback, so please feel free to send your comments to amberarrow on gmail.

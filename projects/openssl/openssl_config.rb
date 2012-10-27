@@ -1,11 +1,11 @@
 # Ruby-based build system.
 # Author: ram
 
-require './hello_world_customize.rb' if File.exist? './hello_world_customize.rb'
+require './openssl_customize.rb' if File.exist? './openssl_customize.rb'
 
-# Project configuration for HelloWorld -- specifies global items like compiler and linker
+# Project configuration for openssl -- specifies global items like compilers, compiler
 # options, etc. Individual bundles of libraries and executables are specified in
-# hello_world.rb
+# openssl.rb
 # Build#setup is the entry point
 # Build#customize, if it exists, has experimental customization
 #
@@ -17,7 +17,22 @@ class Build
           when :rel       then ['-DNDEBUG']
           else raise "Bad build_type = #{@build_type}"
           end
-    opt << '-DPIC' if :dynamic == @link_type
+    opt += ['-DPIC', '-DOPENSSL_PIC'] if :dynamic == @link_type
+
+    opt << '-I' + File.join( @obj_root, 'include' )    # for buildinf.h
+    opt << '-I' + File.join( @src_root, 'include' )    # for e_os.h and e_os2.h
+    opt << '-I' + @src_root
+    opt << '-I' + File.join( @src_root, 'crypto' )
+
+    # The L_ENDIAN should be removed on big endian machines -- do later
+    opt += %w{ -DOPENSSL_THREADS      -D_REENTRANT           -DDSO_DLFCN
+               -DHAVE_DLFCN_H         -DL_ENDIAN
+               -DOPENSSL_IA32_SSE2    -DOPENSSL_BN_ASM_MONT  -DOPENSSL_BN_ASM_MONT5
+               -DOPENSSL_BN_ASM_GF2m  -DSHA1_ASM             -DSHA256_ASM
+               -DSHA512_ASM           -DMD5_ASM              -DAES_ASM
+               -DVPAES_ASM            -DBSAES_ASM            -DWHIRLPOOL_ASM
+               -DGHASH_ASM }
+    opt << '-DTERMIO' if ! @@system.darwin?
 
     @options.add opt, :cpp
   end  # init_cpp_options
@@ -25,150 +40,70 @@ class Build
   def init_cc_options    # global C compiler options
     opt = {    # variations based on build_type
       :dbg => ['-g'],
-      :opt => ['-g', '-O2'],
-      :rel => ['-s', '-O2']
+      :opt => ['-g', '-O3'],
+      :rel => ['-s', '-O3']
     }
     list = opt[ @build_type ]
+    list << '-Wall'
     if @@system.darwin?
-      list += ['-m32', '-fno-common']
+      list << '-fno-common'
     else
-      list << '-Wtype-limits'
+      list << '-fPIC' if :dynamic == @link_type
+      list << '-Wa,--noexecstack'
     end
-    list << '-fPIC' if :dynamic == @link_type
-    list += ['-std=gnu99', '-fdiagnostics-show-option',
-             '-Wall', '-Werror', '-Wempty-body', '-Wpointer-arith', '-Wshadow',
-             '-Wstrict-prototypes']
 
     @options.add list, :cc
   end  # init_cc_options
 
   def init_cxx_options    # global C++ compiler options
-    opt = {    # variations based on build_type
-      :dbg => ['-g'],
-      :opt => ['-g', '-O2', '-fno-strict-aliasing', '-finline-functions',
-               '--param max-inline-insns-single=1800'],
-      :rel => ['-s', '-O2', '-fno-strict-aliasing', '-finline-functions',
-               '--param max-inline-insns-single=1800']
-    }
-    list = opt[ @build_type ]
-
-    # PIC is the default on OSX
-    list << '-fPIC' if (:dynamic == @link_type) && ! @@system.darwin?
-    list += ['-fdiagnostics-show-option',
-             '-Wall',                 '-Wempty-body', '-Werror',
-             '-Wpointer-arith',       '-Wshadow',     '-Wno-overloaded-virtual',
-             '-Wno-strict-overflow',  '-Wwrite-strings']
-    if @@system.darwin?
-      list << '-m32 -fno-common'
-    else
-      list += ['-Wtype-limits', '-Wvla']
-    end
-
-    @options.add list, :cxx
+    # no C++ files in openssl
   end  # init_cxx_options
 
   def init_ld_cc_lib_options    # global options for linking with gcc (C libraries)
-    if @@system.darwin?
-      common = ['-m32']
-      common << '-dynamiclib' if :dynamic == @link_type
-    else
-      common = []
-      common += ['-shared', '-fPIC', '-Wl,-no-undefined'] if :dynamic == @link_type
-    end
     opt = {    # variations based on build_type
       :dbg => [],
-      :opt => ['-O2'],  # linker optimization
-      :rel => ['-O2'],  # linker optimization
+      :opt => ['-O3'],  # linker optimization
+      :rel => ['-O3'],  # linker optimization
     }
+    list = opt[ @build_type ]
+    if @@system.darwin?
+      list << '-dynamiclib' if :dynamic == @link_type
+    else
+      # '-Wl,-no-undefined'
+      list += ['-shared', '-fPIC', '-ldl'] if :dynamic == @link_type
+    end
 
     # add any other library flags to this array, e.g.
     # '-lpthread', '-lssl', '-lcrypto', '-lz', '-lm'
     #
-    list = common + opt[ @build_type ] +
-      ["-L#{@obj_root}/lib",
-       '-Wl,-rpath', (@@system.darwin? ? '-Wl,@loader_path/../lib'
-                                       : '-Wl,\$ORIGIN/../lib')]
+    list += ["-L#{@obj_root}/lib", '-Wl,-rpath',
+            (@@system.darwin? ? '-Wl,@loader_path/../lib' : '-Wl,\$ORIGIN/../lib')]
 
-    @options.add list, :ld_cc_lib
+    @options.add list, :ld_cc_lib if ! list.empty?
   end  # init_ld_cc_lib_options
 
-  # HelloWorld has no C executables, so the content here is not used, just retained as an
-  # example
-  #
   def init_ld_cc_exec_options    # global options for linking with gcc (C executables)
     opt = {    # variations based on build_type
       :dbg => [],
-      :opt => ['-O2'],  # linker optimization
-      :rel => ['-O2'],  # linker optimization
+      :opt => ['-O3'],  # linker optimization
+      :rel => ['-O3'],  # linker optimization
     }
 
-    list = []
-    list << '-m32' if @@system.darwin?
-    list += opt[ @build_type ]
-
-    # add any other library flags here, e.g.
-    # list += ['-lpthread', '-lssl', '-lcrypto', '-lz', '-lm']
+    list = opt[ @build_type ]
+    list += ["-L#{@obj_root}/lib", '-Wl,-rpath',
+            (@@system.darwin? ? '-Wl,@loader_path/../lib' : '-Wl,\$ORIGIN/../lib')]
+    #list += ['-lssl -lcrypto'] if :dynamic == @link_type
+    list << '-ldl'
 
     @options.add list, :ld_cc_exec if !list.empty?
   end  # init_ld_cc_exec_options
 
-  # HelloWorld has no C++ libs, so the content here is not used, just retained as an
-  # example
-  #
   def init_ld_cxx_lib_options    # options for linking with g++ (C++ libs)
-    if @@system.darwin?
-      common = ['-m32']
-      common << '-dynamiclib' if :dynamic == @link_type
-    else
-      common = []
-      common += ['-shared', '-fPIC', '-Wl,-no-undefined'] if :dynamic == @link_type
-    end
-    opt = {    # variations based on build_type
-      :dbg => [],
-      :opt => ['-O2'],  # linker optimization
-      :rel => ['-O2'],  # linker optimization
-    }
-
-    # add any other needed library flags to this array, e.g.
-    # '-lpthread', '-lm'
-    #
-    list = common + opt[ @build_type ] +
-      ["-L#{@obj_root}/lib",
-       '-Wl,-rpath', (@@system.darwin? ? '-Wl,@loader_path/../lib'
-                                       : '-Wl,\$ORIGIN/../lib')]
-
-    @options.add list, :ld_cxx_lib if ! list.empty?
+    # no C++ files in openssl
   end  # init_ld_cxx_lib_options
 
   def init_ld_cxx_exec_options    # options for linking with g++ (C++ executables)
-    opt = {    # variations based on build_type
-      :dbg => [],
-      :opt => ['-O2'],  # linker optimization
-      :rel => ['-O2'],  # linker optimization
-    }
-
-    if :static == @link_type
-
-      list = []
-      list << '-m32' if @@system.darwin?
-      list += opt[ @build_type ]
-
-    else    # fully dynamic linking
-
-      if @@system.darwin?
-        common = ['-m32']
-      else
-        common = ['-Wl,-no-undefined']
-      end
-      list = common + opt[ @build_type ] +
-        ['-Wl,-rpath',
-         (@@system.darwin? ? '-Wl,@loader_path/../lib' : '-Wl,\$ORIGIN/../lib'),
-         # add any other needed library flags here, e.g.
-         # '-lpthread', '-lm',
-        ]
-    end  # static check
-
-    @options.add list, :ld_cxx_exec if ! list.empty?
+    # no C++ files in openssl
   end  # init_ld_cxx_exec_options
 
   def init_options    # initialize global default options
@@ -208,7 +143,7 @@ class Build
   end  # add_default_targets
 
   def create_dirs    # create necessary directories under obj_root
-    cmd = "mkdir -p %s %s" % ['lib', 'bin'].map!{ |f| File.join @obj_root, f }
+    cmd = "mkdir -p %s %s %s" % %w{ lib bin include }.map!{ |f| File.join @obj_root, f }
     Util.run_cmd cmd, @@logger
   end  # create_dirs
 
@@ -221,7 +156,7 @@ class Build
     raise "Argument already added" if @@bundles.include? bundle
 
     # cannot log anything since the logger is not yet initialized; this code runs during
-    # load of hello_world.rb
+    # load of yovo.rb
     # @@logger.info "Adding bundle %s" % bundle.name
     #
     @@bundles << bundle
@@ -229,6 +164,14 @@ class Build
 
   def setup    # invoked while initializing a build
     create_dirs    # create needed directories under build.obj_root
+
+    # copy appropriate header file if necessary
+    dest = File.join @obj_root, 'include', 'buildinf.h'
+    if !File.exist? dest
+      f = @@system.darwin? ? 'osx-buildinf.h' : 'linux-buildinf.h'
+      cmd = "cp %s %s" % [f, dest]
+      Util.run_cmd cmd, Build.logger
+    end
 
     # default options for compilers, linkers, etc. Create these first since they may
     # have to be duplicated and customized by the targets

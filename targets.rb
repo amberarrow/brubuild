@@ -146,15 +146,15 @@ class Build    # main class and namespace
     #              true [optional]
     #
     # sample usage:
-    #     delete_options( :options => ['-Wl,-rpath', '-Wl,/opt/foo/lib'],
-    #                     :type    => :ld_cc_lib,
-    #                     :err     => false )
+    #     delete_options( :options     => ['-Wl,-rpath', '-Wl,/opt/foo/lib'],
+    #                     :option_type => :ld_cc_lib,
+    #                     :err         => false )
     #
     def delete_options args
       opt = args[ :options ]
       raise "Missing options" if !opt
       raise "Empty options"   if opt.empty?
-      type, err = args[ :type ], args[ :err ]
+      type, err = args[ :option_type ], args[ :err ]
       err = true if err.nil?
 
       # make a local copy of global options if necessary and delete options from copy
@@ -182,15 +182,15 @@ class Build    # main class and namespace
     #              false [optional]
     #
     # sample usage:
-    #     add_options( :options => ['-Wtype-limits'],
-    #                  :type    => :cpp,
-    #                  :replace => true )
+    #     add_options( :options     => ['-Wtype-limits'],
+    #                  :option_type => :cpp,
+    #                  :replace     => true )
     #
     def add_options args
       opt = args[ :options ]
       raise "Missing options" if !opt
       raise "Empty options"   if opt.empty?
-      type, err = args[ :type ], args[ :err ]
+      type, err = args[ :option_type ], args[ :err ]
       err = true if err.nil?
 
       # make a local copy of global options if necessary and add options to copy
@@ -292,7 +292,7 @@ class Build    # main class and namespace
     # /usr/include/c++/4.4/bits/basic_string.tcc
     # /usr/include/boost/date_time/gregorian_calendar.ipp
     #
-    R_SRC_EXT = /\.(?:h|hpp|ipp|tcc|cc|cpp|c|C|S)$/o    # supported source file extensions
+    R_SRC_EXT = /\.(?:h|hpp|ipp|tcc|cc|cpp|c|C|S|s)$/o  # supported source file extensions
 
     # cmd
     #    if defined, this is a simple shell command to generate this target; not
@@ -406,7 +406,7 @@ class Build    # main class and namespace
     def initialize a_src, a_path, a_build
       ext = a_src.extname
       raise "Empty src extension" if ext.empty?
-      raise "Bad source file extension in: #{ext}" if ext != '.S'
+      raise "Bad source file extension in: #{ext}" if ext !~ /.[sS]/o
       super a_src, a_path, a_build
     end  # initialize
 
@@ -418,9 +418,9 @@ class Build    # main class and namespace
     end  # get_options
 
     def get_cmd   # return command to rebuild this object
-      # We currently do not use any C pre-processor features in our assembler files; if
+      # We currently do not support C pre-processor directives in assembler files; if
       # and when we do, we'll need to add CPP options like this:
-      # cpp_opt = get_cpp_options false
+      #   cpp_opt = get_cpp_options false
       # Then add before as_opt.to_s in the array: cpp_opt.to_s
       #
       as_opt = get_options false
@@ -1241,8 +1241,8 @@ class Build    # main class and namespace
     raise "Bad build type: #{all}" if all and true != all
 
     # remove trailing slash if any
-    incl.chop! if incl && '/' == incl[ -1 ]
-    excl.chop! if excl && '/' == excl[ -1 ]
+    incl.map!{ |v| '/' == v[ -1 ] ? v.chop : v } if incl
+    excl.map!{ |v| '/' == v[ -1 ] ? v.chop : v } if excl
 
     log = Build.logger
 
@@ -1301,7 +1301,7 @@ class Build    # main class and namespace
   # file -- full path to source file
   # cmd -- command to generate source file
   # sub -- if sub is true, we expect to find src_root as a prefix and replace it with
-  #        obj_root; sub is false for generated source
+  #        obj_root; sub is false for generated source files
   # all -- if true, targets of all 3 types are added, otherwise only a single target of
   #        the current build type is added (currently, always false)
   #
@@ -1309,12 +1309,12 @@ class Build    # main class and namespace
   # such files, a generation command must be provided in gen
   #
   def add_object file, cmd = nil, sub = true, all = false
-    raise "Need generation command for #{file}" if !cmd && !sub
+    #raise "Need generation command for #{file}" if !cmd && !sub
 
     #log = Build.logger
     ext = File.extname file     # add source target based on extension
     case ext
-    when /\.S\Z/o                        # assembler source file
+    when /\.[sS]\Z/o                        # assembler source file
       src = SourceFileTarget.new file, self, cmd
       cls = ObjFileTargetAS
       
@@ -1516,9 +1516,20 @@ class Build    # main class and namespace
     args[ :build ] = self
 
     # replace dependency lists with lists of corresponding objects
-    args[ :deps ] = names_to_objects args[ :files ]
+
+    # object files
+    files = args[ :files ]
+    raise "File list missing" if !files
+    raise "Expected Array, got String" if files.is_a?( String )
+    raise "File list empty" if files.empty?
+    args[ :deps ] = names_to_objects files
+
+    # libraries
     libs = args[ :libs ]
-    args[ :libs ] = names_to_objects( libs, :lib ) if libs
+    if libs
+      raise "Expected Array, got String" if libs.is_a?( String )
+      args[ :libs ] = names_to_objects( libs, :lib ) if libs
+    end
 
     Build.logger.debug "Creating library target %s" % args[ :path ]
     return LibFileTarget.new args
@@ -1554,36 +1565,44 @@ class Build    # main class and namespace
     return ExecFileTarget.new args
   end  # exe_target
 
-  # helper routine to return unique target object for deleting or adding options after
+  # helper routine to return list of target objects for deleting or adding options after
   # checking arguments
   #
-  def get_target args
-    tgt, opt = args[ :target ], args[ :options ]
-    raise "Missing target"  if !tgt
-    raise "Empty target"    if tgt.empty?
-    name, kind = tgt
-    raise "Need target name" if !name || name.empty?
-    raise "Bad target kind: #{kind}" if ![:obj, :lib, :exe].include? kind
+  def get_targets args
+    tlist = args[ :targets ]
+    raise "Missing target list"  if !tlist
+    raise "Empty target list" if tlist.empty?
+    t_type = args[ :target_type ]
+    raise "Missing target_type" if !t_type
+    raise "Bad target type: #{t_type}" if ![:obj, :lib, :exe].include? t_type
+    opt = args[ :options ]
     raise "Missing options" if !opt
     raise "Empty options"   if opt.empty?
+    result = []
+    tlist.each{ |name|
+      name.strip!
+      raise "Target name empty" if name.empty?
 
-    # add version and extension if necessary (user may supply the full name
-    # such as libFoo.3.2.1.so_dbg or just the prefix 'libFoo')
-    #
-    ext = File.extname name
-    raise "Please omit extension in name (it will be computed): #{name}" if !ext.empty?
-    name = add_ext name, kind
+      # add version and extension if necessary (user may supply the full name
+      # such as libFoo.3.2.1.so_dbg or just the prefix 'libFoo')
+      #
+      ext = File.extname name
+      raise "Please omit extension in name (it will be computed): #{name}" if !ext.empty?
+      name = add_ext name, t_type
 
-    target = find_target name
-    raise "Target #{name} not found" if !target
-    raise "Target #{name} not unique" if target.size > 1
-    return target.first
-  end  # get_target
+      target = find_target name
+      raise "Target #{name} not found" if !target
+      raise "Target #{name} not unique" if target.size > 1
+      result << target.first
+    }
+    return result
+  end  # get_targets
 
   # delete options of specified type from given target; args is a hash with these keys:
-  #   target  -- [name, kind] name and kind of target (:obj, :lib, :exe) [required]
-  #   options -- array of options to delete [required]
-  #   type    -- type of options (:cpp) [optional]
+  #   targets  -- array of target names
+  #   target_type  -- type of target (:obj, :lib, :exe) [required]
+  #   options -- array of option strings to delete [required]
+  #   option_type    -- type of options (:cpp) [optional]
   #              required only when adding pre-processor options to assembler, C and C++
   #              targets and should be :cpp in those cases; in other cases, it is
   #              deduced from target type.
@@ -1591,13 +1610,14 @@ class Build    # main class and namespace
   #              true [optional]
   #
   def delete_target_options args
-    get_target( args ).delete_options args
+    get_targets( args ).each{ |t| t.delete_options args }
   end  # delete_target_options
 
   # add options of specified type to given target; args is a hash with these keys:
-  #   target  -- [name, kind] name and kind of target (:obj, :lib, :exe) [required]
-  #   options -- array of optionstrings to add [required]
-  #   type    -- type of options (:cpp) [optional]
+  #   targets  -- array of target names
+  #   target_type  -- type of target (:obj, :lib, :exe) [required]
+  #   options -- array of option strings to add [required]
+  #   option_type    -- type of options (:cpp) [optional]
   #              required only when adding pre-processor options to assembler, C and C++
   #              targets and should be :cpp in those cases; in other cases, it is
   #              deduced from target type.
@@ -1606,7 +1626,7 @@ class Build    # main class and namespace
   #              false [optional]
   #
   def add_target_options args
-    get_target( args ).add_options args
+    get_targets( args ).each{ |t| t.add_options args }
   end  # add_target_options
 
   # recursive helper routine -- this should be removed and the relevant code fragments

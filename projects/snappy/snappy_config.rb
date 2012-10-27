@@ -1,7 +1,8 @@
 # Rubuild build file for snappy (http://code.google.com/p/snappy/)
 # Author: ram
 
-require './snappy_customize.rb' if File.exist? './snappy_customize.rb'
+_s = './snappy_customize.rb'
+require _s if File.exist? _s
 
 # Project configuration for snappy -- specifies global items like compilers, compiler
 # options, etc. Individual bundles of libraries and executables are specified in
@@ -82,22 +83,22 @@ class Build
   end  # init_ld_cxx_lib_options
 
   def init_ld_cxx_exec_options    # options for linking with g++ (C++ executables)
+    opt = {    # variations based on build_type
+      :dbg => [],
+      :opt => ['-O2'],  # linker optimization
+      :rel => ['-O2'],  # linker optimization
+    }
+    list = opt[ @build_type ]
     if :static == @link_type
+      list << '-lz'
     else    # fully dynamic linking
-      opt = {    # variations based on build_type
-        :dbg => [],
-        :opt => ['-O2'],  # linker optimization
-        :rel => ['-O2'],  # linker optimization
-      }
 
-      list = opt[ @build_type ] +
-        ['-Wl,-rpath',
+        list += ['-Wl,-rpath',
          (@@system.darwin? ? '-Wl,@loader_path/../lib' : '-Wl,\$ORIGIN/../lib'),
-         '-lz'
-        ]
+         '-lz']
     end  # static check
 
-    @options.add list, :ld_cxx_exec
+    @options.add list, :ld_cxx_exec if ! list.empty?
   end  # init_ld_cxx_exec_options
 
   def init_options    # initialize global default options
@@ -137,8 +138,7 @@ class Build
   end  # add_default_targets
 
   def create_dirs    # create necessary directories under obj_root
-    cmd = "mkdir -p %s %s %s" % ['lib', 'bin', 'include'].map!{ |f|
-      File.join @obj_root, f }
+    cmd = "mkdir -p %s %s %s" % %w{ lib bin include }.map!{ |f| File.join @obj_root, f }
     Util.run_cmd cmd, @@logger
   end  # create_dirs
 
