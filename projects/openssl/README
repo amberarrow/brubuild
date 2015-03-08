@@ -12,13 +12,13 @@ with the distribution).
 Start the build like this (where <src-dir> is the full path to the root of the unpacked
 source directory, e.g. ~/Software/openssl-1.0.1c):
 
-    ruby -w openssl.rb -s <src-dir> -o /var/tmp/rubuild/openssl -b rel -l static
+    ruby -w openssl.rb -s <src-dir> -o /var/tmp/brubuild/openssl -b rel -l static
 
 Omit the "-b rel" if you want a debug (i.e. non-optimized) build; on my machine, the
 debug build takes 21s and the optimized build takes 30s.
 
 After it finishes, you should find the library files 'libcrypto.a_rel' and 'libssl.a_rel'.
-and the binary 'openssl.rel_s' under /var/tmp/rubuild/openssl/{lib,bin}.
+and the binary 'openssl.rel_s' under /var/tmp/brubuild/openssl/{lib,bin}.
 
 NOTES:
 =====

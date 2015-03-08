@@ -17,11 +17,17 @@ been tested on Linux and Mac/OSX.
 7. Limitations
 8. Odds and Ends
 
-### Installing Ruby 1.9.X and Tokyo Cabinet
+### Installing Ruby and Tokyo Cabinet
 
-<b>Brubuild</b> needs Ruby 1.9.X which itself has a couple of prerequisites: the
-development libraries for <b>zlib</b> and <b>libreadline6</b>
-(packages <b><code>zlib1g-dev</code></b> and <b><code>libreadline6-dev</code></b>
+<b>Brubuild</b> needs Ruby 1.9.X or later which itself has a couple of prerequisites: the
+development libraries for <b>zlib</b>, <b>bzip2</b>, <b>ffi</b>, <b>yaml</b> and
+<b>libreadline6</b>
+(packages
+<b><code>zlib1g-dev</code></b>,
+<b><code>libbz2-dev</code></b>,
+<b><code>libffi-dev</code></b>,
+<b><code>libyaml-dev</code></b>,
+and <b><code>libreadline6-dev</code></b>
 on debian-based systems). It also needs <b>Tokyo Cabinet</b> (a "NoSQL" database),
 including its Ruby bindings.
 

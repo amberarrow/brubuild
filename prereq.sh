@@ -1,10 +1,15 @@
 #!/bin/bash
 
-# script to download and install prerequisites for sake:
-#  zlib1g-dev         [Ruby 1.9.X pre-requisite for some features]
-#  libreadline6-dev   [Ruby 1.9.X pre-requisite for some features]
-#  tokyocabinet
-#  tokyocabinet-ruby
+# script for debian package based systems (like Ubuntu) to download and
+# install these prerequisites for Brubuild:
+#
+#  libbz2-dev           [TokyoCabinet pre-requisite]
+#  zlib1g-dev           [Ruby pre-requisite for some features]
+#  libreadline6-dev     [Ruby pre-requisite for some features]
+#  libffi-dev           [Ruby pre-requisite for some features]        
+#  libyaml-dev          [Ruby pre-requisite for some features]
+#  tokyocabinet         [for persistence]
+#  tokyocabinet-ruby    [for persistence]
 #
 # usage:
 #     bash prereq.sh [install-dir]
@@ -15,7 +20,7 @@
 
 set -e    # exit if we encounter errors
 
-sudo apt-get install zlib1g-dev libreadline6-dev
+sudo apt-get install libbz2-dev zlib1g-dev libreadline6-dev libyaml-dev libffi-dev
 
 if [[ -n "$1" ]]; then
     prefix="$1"
@@ -25,14 +30,14 @@ fi
 [[ -d "$prefix" ]] || mkdir -p "$prefix"
 
 # top-level directories from tarballs
-rb_dir=ruby-1.9.3-p194   tc_dir=tokyocabinet-1.4.47   tcr_dir=tokyocabinet-ruby-1.31
+rb_dir=ruby-2.2.1   tc_dir=tokyocabinet-1.4.47   tcr_dir=tokyocabinet-ruby-1.31
 
 # change to false if the archives are already downloaded and unpacked
 if /bin/true; then
     # fetch tarballs and extract
     rb="$rb_dir.tar.gz" tc="$tc_dir.tar.gz" tcr="$tcr_dir.tar.gz"
 
-    wget http://ftp.ruby-lang.org/pub/ruby/1.9/"$rb"
+    wget http://ftp.ruby-lang.org/pub/ruby/2.2.1/"$rb"
     wget http://fallabs.com/tokyocabinet/"$tc"
     wget http://fallabs.com/tokyocabinet/rubypkg/"$tcr"
 
@@ -51,7 +56,7 @@ chkdir "$rb_dir" "$tc_dir" "$tcr_dir"
 cd "$rb_dir"      # make ruby
 ./configure --prefix=$prefix
 make; make install
-echo "Installed Ruby 1.9.3 in $prefix"
+echo "Installed Ruby 2.2.1 in $prefix"
 
 cd ../$tc_dir     # make tokyocabinet
 ./configure --prefix=$prefix

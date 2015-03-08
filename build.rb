@@ -7,7 +7,8 @@
 #
 
 # we need 1.9.X
-raise "RUBY_VERSION = #{RUBY_VERSION}; need 1.9.3 or later" if RUBY_VERSION !~ /1.9/
+raise "RUBY_VERSION = #{RUBY_VERSION}; need 1.9.3 or later" if
+  Gem::Version.new(RUBY_VERSION) < Gem::Version.new('1.9.1')
 
 # Execution starts with Build.start defined here.
 
@@ -309,7 +310,7 @@ class Build    # main class and namespace
     Thread.current[ :id ] = "Thr_main"    # name of thread
 
     # determine what kind of system we're running on
-    init_system
+    #init_system
 
     # initialize logger
     LogMain.set_log_file_params( :name => 'build.log' )

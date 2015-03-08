@@ -3,7 +3,7 @@ sources.
 
 Start the build like this:
 
-ruby -w hello_world.rb -s $PWD/../../HelloWorld -o /var/tmp/rubuild/HelloWorld -b rel
+ruby -w hello_world.rb -s $PWD/../../HelloWorld -o /var/tmp/brubuild/HelloWorld -b rel
 
 You should see output like this:
 
@@ -12,9 +12,9 @@ Discovering dependencies ... done
 Shutting down thread pool ...
 Build finished
 
-At this point, you can examine /var/tmp/rubuild/HelloWorld/bin to verify that it has a
+At this point, you can examine /var/tmp/brubuild/HelloWorld/bin to verify that it has a
 binary named "hello.rel_d". Now, run the binary with an integer argument:
-    /var/tmp/rubuild/HelloWorld/bin/hello.rel_d 3
+    /var/tmp/brubuild/HelloWorld/bin/hello.rel_d 3
 
 You should see the following output:
 

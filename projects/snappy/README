@@ -4,11 +4,11 @@ http://code.google.com/p/snappy/ and unpack it somewhere.
 Start the build like this (where <src-dir> is the full path to the directory where
 you unpacked the snappy source archive):
 
-ruby -w snappy.rb -s <src-dir> -o /var/tmp/rubuild/snappy -v 1.1.3 -b rel
+  ruby -w snappy.rb -s <src-dir> -o /var/tmp/brubuild/snappy -b rel
 
 After it finishes, you should find the snappy library 'libsnappy.1.1.3.so_rel' and the
 the executable for running unit tests 'snappy_unittest.rel_d' under
-/var/tmp/rubuild/snappy/{lib,bin}. The executable needs to be run from the snappy source
+/var/tmp/brubuild/snappy/{lib,bin}. The executable needs to be run from the snappy source
 directory since it needs some data from there.
 
 NOTES:
@@ -24,7 +24,7 @@ NOTES:
    will be optimized, asserts disabled and the binaries stripped.
 
 5. The 'configure' script in the snappy distribution creates a config.h file based which
-   header files are present; currently, rubuild does not have this capability (though it
+   header files are present; currently, brubuild does not have this capability (though it
    is easy to add) so we simulate this behavior with pre-built config.h files for major
    platforms (e.g. Linux, OSX/Darwin).
 

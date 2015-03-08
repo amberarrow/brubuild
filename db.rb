@@ -114,9 +114,9 @@ class Build
 
       return false if obj1 == obj2
 
-      printf( "Objects differ: #{sym}, #{key}\nClasses: %s, %s\nhashes = %d, %d\n" +
+      printf( "Objects differ: sym = %s, key = %s\nClasses: %s, %s\nhashes = %d, %d\n" +
               "No. of elements: %d, %d\n",
-              obj1.class.name, obj2.class.name, obj1.hash, obj2.hash,
+              sym.to_s, key.to_s, obj1.class.name, obj2.class.name, obj1.hash, obj2.hash,
               obj1.options.size, obj2.options.size )
       obj1.dump
       obj2.dump
@@ -144,7 +144,7 @@ class Build
     end  # persist_globals
 
     def persist_target t    # save target data if necessary
-      raise "Expected BaseTarget, got #{t.class.name}" if !t.is_a? BaseTarget
+      raise "Expected Target, got #{t.class.name}" if !t.is_a? Target
       log = Build.logger
       path = t.path
       if !t.rebuilt
@@ -152,7 +152,7 @@ class Build
         return
       end
       obj_old = get_obj path
-      obj_new = BaseTargetDB.new t
+      obj_new = CompileOrLinkTargetDB.new t
       put( path, Marshal.dump( obj_new ) ) if obj_new != obj_old
       log.info "Persisted: %s" % path
     end  # persist_target
@@ -225,7 +225,7 @@ class Build
   end  # Db
 
   # classes used for persistence; most mirror target classes
-  class BaseTargetDB
+  class CompileOrLinkTargetDB
     # (paths to compilers saved as global items)
     #
     # path:
@@ -248,12 +248,15 @@ class Build
       # convert from objects to paths
       @deps = tgt.deps.map( &:path )
 
-      nhd = tgt.no_hdr_deps        # persist only if defined
-      @no_hdr_deps = nhd if nhd
+      if tgt.is_a? Compilable
+        nhd = tgt.no_hdr_deps          # persist only if defined
+        @no_hdr_deps = nhd if nhd
+        opt_cpp = tgt.options_cpp      # persist only if defined
+        @options_cpp = opt_cpp if opt_cpp
+      end
 
-      opt_cpp, opt = tgt.options_cpp, tgt.options        # persist only if defined
-      @options_cpp = opt_cpp if opt_cpp
-      @options     = opt if opt
+      opt = tgt.options        # persist only if defined
+      @options = opt if opt
 
       #Build.logger.debug "Initialized %s, deps.size = %d" % [p, d.size]
     end  # initialize
@@ -286,7 +289,7 @@ class Build
       @options_cpp.dump if defined? @options_cpp
       @options.dump if defined? @options
     end  # dump
-  end  # BaseTargetDB
+  end  # CompileOrLinkTargetDB
 end  # Build
 
 

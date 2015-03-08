@@ -4,10 +4,10 @@ http://fallabs.com/tokyocabinet/tokyocabinet-1.4.47.tar.gz and unpack it somewhe
 Start the build like this (where <src-dir> is the full path to the directory where
 you unpacked the source archive):
 
-ruby -w tc.rb -s <src-dir> -o /var/tmp/rubuild/tokyocabinet -v 1.4.47 -b rel
+ruby -w tc.rb -s <src-dir> -o /var/tmp/brubuild/tokyocabinet -v 1.4.47 -b rel
 
 After it finishes, you should find the library 'libtokyocabinet.1.4.47.so_rel'
-and a number of executables under /var/tmp/rubuild/tokyocabinet/{lib,bin}.
+and a number of executables under /var/tmp/brubuild/tokyocabinet/{lib,bin}.
 
 NOTES:
 =====

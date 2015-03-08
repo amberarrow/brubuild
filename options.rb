@@ -547,6 +547,14 @@ class Build    # main class and namespace
     end
   end  # OptionInclude
 
+  # Include a file: -include x/y/foo.h (NOTE: order of these options is important)
+  class OptionIncludeFile < Option
+    def self.[]( a_param )
+      raise "Need include path" if !a_param || a_param.empty?
+      new '-include', :preprocessor, :required, a_param, nil, ' '
+    end
+  end  # OptionIncludeFile
+
   class OptionMachine < Option    # -mfoo (compiler, assembler, or linker)
     PARAM_M = Set[ 'sse2', '64', '32']
 
@@ -586,6 +594,27 @@ class Build    # main class and namespace
     end
   end  # OptionNoCommon
 
+  # -pedantic is compiler option
+  class OptionPedantic < Option
+    def self.[]()
+      new '-pedantic', :compiler, :none
+    end
+  end  # OptionPedantic
+
+  # -pthread is compiler option
+  class OptionPthread < Option
+    def self.[]()
+      new '-pthread', :compiler, :none
+    end
+  end  # OptionPthread
+
+  # -pipe is compiler option
+  class OptionPipe < Option
+    def self.[]()
+      new '-pipe', :compiler, :none
+    end
+  end  # OptionPipe
+
   # -flto is both compiler and linker option!
   class OptionLTO < Option
     def self.[]( c_or_l )
@@ -622,7 +651,7 @@ class Build    # main class and namespace
     end
   end  # OptionDebug
 
-  class OptionOptimize < Option    # -O? or -fno-default-inline
+  class OptionOptimize < Option    # -O? or other -f options like -fno-default-inline etc.
     PARAM_O = Set['0', '1', '2', '3', 's' 'fast']
 
     # we currently use these options (add more as needed):
@@ -630,18 +659,23 @@ class Build    # main class and namespace
     #   -finline-functions
     #   -fno-strict-aliasing
     #
-    PARAM_f = Set[ 'inline-functions',  'no-inline-functions',
-                   'strict-aliasing',   'no-strict-aliasing' ]
+    PARAM_f = Set[ 'inline-functions',    'no-inline-functions',
+                   'strict-aliasing',     'no-strict-aliasing',
+                   'function-sections',   'data-sections',
+                   'omit-frame-pointer',  'reorder-blocks',
+                   'no-rtti',             'no-exceptions']
 
     def self.[]( a_name, a_param, a_kind = :compiler )
       if '-O' == a_name
         raise "Bad -O parameter: #{a_param}" if a_param && !PARAM_O.include?( a_param )
+        new a_name, a_kind, :optional, a_param
       elsif '-f' == a_name
-        raise "Bad -f parameter: #{a_param}" if a_param && !PARAM_f.include?( a_param )
+        raise "Missing -f parameter"         if !a_param
+        raise "Bad -f parameter: #{a_param}" if !PARAM_f.include?( a_param )
+        new a_name, a_kind, :required, a_param
       else
         raise "Bad optimize option: #{a_name}"
       end
-      new a_name, a_kind, :optional, a_param
     end
   end  # OptionOptimize
 
@@ -1011,6 +1045,7 @@ class Build    # main class and namespace
         when /^-D(\S+)/o then result << OptionDefine[ '-D', $1 ]
         when /^-U(\S+)/o then result << OptionDefine[ '-U', $1 ]
         when /^-I(\S+)/o then result << OptionInclude[ $1 ]
+        when /^-include\s+(\S+)/o then result << OptionIncludeFile[ $1 ]
         else raise "Bad pre-processor option: #{opt}"
         end
       }
@@ -1048,7 +1083,7 @@ class Build    # main class and namespace
         return
       end  # -D/-U check
 
-      raise "Bad pre-processor option: %s" % opt.name if '-I' != opt.name
+      raise "Bad pre-processor option: %s" % opt.name if !['-I','-include'].include?( opt.name )
 
       # add more checks as needed
     end  # add_opt
@@ -1081,10 +1116,8 @@ class Build    # main class and namespace
           when 'signed-char' then result << OptionSignedChar[]
           when 'unsigned-char' then result << OptionUnsignedChar[]
           when 'no-common' then result << OptionNoCommon[]
-          when 'no-strict-aliasing', 'inline-functions'
-            raise "Optimization option -f%s in debug build" % name if :dbg == @bld
+          else
             result << OptionOptimize[ '-f', name ]
-          else raise "Unknown -f option: #{name}"
           end
 
         when /^--param ([-=a-zA-Z0-9]+)/o
@@ -1107,6 +1140,15 @@ class Build    # main class and namespace
         when /^-g$/o
           raise "-g option invalid for release build" if :rel == @bld
           result << OptionDebug[]
+
+        when /^-pedantic$/o
+          result << OptionPedantic[]
+
+        when /^-pipe$/o
+          result << OptionPipe[]
+
+        when /^-pthread$/o
+          result << OptionPthread[]
 
         when /^-s$/o
           raise "-s option valid only for release build" if :rel != @bld
