@@ -8,7 +8,7 @@ been tested on Linux and Mac/OSX.
 
 ## Table of Contents
 
-1. Installing Ruby 1.9.X and Tokyo Cabinet
+1. Installing Ruby and Tokyo Cabinet
 2. How to build demo projects
 3. Rationale
 4. Features
